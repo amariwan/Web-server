@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<body>
+
+
+
+  <script>
+    // if ready window
+    window.addEventListener('load', function () {
+
+
+      const Eresponse = document.createElement("p");
+
+      var xhr = new XMLHttpRequest();
+
+      // Configure the request: GET request for the URL /hello/fuck
+      xhr.open('GET', 'http://localhost:5222/');
+
+      xhr.onload = function () {
+        if (xhr.status === 200) {
+          var response = xhr.response;
+          console.log(response);
+          Eresponse.textContent = response;
+          Eresponse.style.color = "green";
+          document.body.append(Eresponse)
+        } else {
+          console.log(`Error ${xhr.status}: ${xhr.statusText}`);
+          Eresponse.textContent = `Error ${xhr.status}: ${xhr.statusText}`;
+          document.body.append(Eresponse)
+        }
+      };
+
+      xhr.onerror = function () {
+        console.log("Request failed");
+        Eresponse.textContent = "Request failed";
+        Eresponse.style.color = "red";
+        document.body.append(Eresponse)
+      };
+
+      try {
+        xhr.send();
+      } catch (err) {
+        console.log("Request failed");
+      }
+
+
+
+      // Create a new WebSocket instance
+      var socket = new WebSocket('ws://localhost:5222/wss');
+
+      // Connection opened
+      socket.addEventListener('open', (event) => {
+        console.log('Connected to the server');
+
+        // Send a message to the server
+        socket.send('Hello, server!');
+      });
+
+      // Listen for messages from the server
+      socket.addEventListener('message', (event) => {
+        console.log('Received message from server:', event.data);
+        const Eresponse = document.createElement("p");
+        Eresponse.textContent = event.data;
+        document.body.append(Eresponse)
+      });
+
+      // Handle errors
+      socket.addEventListener('error', (event) => {
+        console.error('WebSocket error:', event);
+      });
+
+      // Connection closed
+      socket.addEventListener('close', (event) => {
+        console.log('Connection closed');
+      });
+
+      const sendMsg = document.createElement("input");
+      sendMsg.type = "text";
+      sendMsg.placeholder = "send message";
+      sendMsg.addEventListener("keyup", function (event) {
+        if (event.keyCode === 13) {
+          event.preventDefault();
+          socket.send(sendMsg.value);
+          sendMsg.value = "";
+        }
+      });
+      document.body.append(sendMsg);
+
+    });
+
+  </script>
+
+</body>
+
+</html>
