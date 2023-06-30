@@ -5,6 +5,56 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document</title>
+  <style>
+    body {
+
+      font-family: sans-serif;
+      background: #ecf0f1;
+      width: 100%;
+      height: 100vh;
+    }
+
+    .message {
+      margin: 10px;
+    }
+
+    .user-message {
+      color: violet;
+    }
+
+    /* Beispiel-Styling für das Chatfenster */
+    #chat-messages {
+      height: 300px;
+      overflow-y: scroll;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 10px;
+    }
+
+    .status-indicator {
+
+      width: 30px;
+      height: 30px;
+      background-color: red;
+      border-radius: 50%;
+      margin: 10px;
+      animation: pulse 1s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.1);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+    }
+  </style>
 </head>
 
 <body>
@@ -14,26 +64,35 @@
   <script>
     // if ready window
     window.addEventListener('load', function () {
+      // Status of the connection to the server
+      const status = document.createElement("div");
+      status.classList.add("status-indicator");
+      status.style.position = "fixed";
+      status.style.top = "10px";
+      status.style.right = "10px";
+      updateStatus("red");
 
+      // Append the status element to the body
+      document.body.append(status);
 
-      const Eresponse = document.createElement("p");
+      const Eresponse = createResponseElement("chat-response", "user-response");
 
-      var xhr = new XMLHttpRequest();
+      const xhr = new XMLHttpRequest();
 
       // Configure the request: GET request for the URL /hello/fuck
-      xhr.open('GET', 'http://localhost:5222/');
+      xhr.open('GET', 'https://192.168.44.185:32774/');
 
       xhr.onload = function () {
-        if (xhr.status === 200) {
-          var response = xhr.response;
+        const { status: xhrStatus, response, statusText } = xhr;
+        if (xhrStatus === 200) {
           console.log(response);
           Eresponse.textContent = response;
           Eresponse.style.color = "green";
-          document.body.append(Eresponse)
+          document.body.append(Eresponse);
         } else {
-          console.log(`Error ${xhr.status}: ${xhr.statusText}`);
-          Eresponse.textContent = `Error ${xhr.status}: ${xhr.statusText}`;
-          document.body.append(Eresponse)
+          console.log(`Error ${xhrStatus}: ${statusText}`);
+          Eresponse.textContent = `Error ${xhrStatus}: ${statusText}`;
+          document.body.append(Eresponse);
         }
       };
 
@@ -41,7 +100,7 @@
         console.log("Request failed");
         Eresponse.textContent = "Request failed";
         Eresponse.style.color = "red";
-        document.body.append(Eresponse)
+        document.body.append(Eresponse);
       };
 
       try {
@@ -50,50 +109,106 @@
         console.log("Request failed");
       }
 
-
-
       // Create a new WebSocket instance
-      var socket = new WebSocket('ws://localhost:5222/wss');
+      const socket = new WebSocket('wss://192.168.44.185:32774/wss');
 
       // Connection opened
       socket.addEventListener('open', (event) => {
         console.log('Connected to the server');
-
-        // Send a message to the server
-        socket.send('Hello, server!');
-      });
-
-      // Listen for messages from the server
-      socket.addEventListener('message', (event) => {
-        console.log('Received message from server:', event.data);
-        const Eresponse = document.createElement("p");
-        Eresponse.textContent = event.data;
-        document.body.append(Eresponse)
+        updateStatus("green");
+        startChatApp();
       });
 
       // Handle errors
       socket.addEventListener('error', (event) => {
         console.error('WebSocket error:', event);
+        updateStatus("red");
       });
 
       // Connection closed
       socket.addEventListener('close', (event) => {
         console.log('Connection closed');
+        console.error('WebSocket error:', event);
+
+        updateStatus("red");
       });
 
-      const sendMsg = document.createElement("input");
-      sendMsg.type = "text";
-      sendMsg.placeholder = "send message";
-      sendMsg.addEventListener("keyup", function (event) {
-        if (event.keyCode === 13) {
-          event.preventDefault();
-          socket.send(sendMsg.value);
-          sendMsg.value = "";
+      function updateStatus(color) {
+        status.style.backgroundColor = color;
+      }
+
+      function createResponseElement(...classNames) {
+        const responseElement = document.createElement("p");
+        responseElement.classList.add(...classNames);
+        return responseElement;
+      }
+
+      function startChatApp() {
+        let name; // name for the user
+
+        WUrName((resName) => {
+          name = resName;
+          const responseElement = createResponseElement("chat-response", "user-response");
+          responseElement.textContent = `Hey ${name}`;
+          document.body.append(responseElement);
+          createInputForSendMsg();
+        });
+
+        // Listen for messages
+        socket.addEventListener('message', (event) => {
+          console.log('Message from server ', event.data);
+          const responseElement = createResponseElement("chat-response");
+          responseElement.textContent = `server: ${event.data}`;
+          responseElement.style.color = "blue";
+          document.body.append(responseElement);
+        });
+
+        // Send a message to the server
+        function createInputForSendMsg() {
+          const sendMsg = document.createElement("input");
+          sendMsg.type = "text";
+          sendMsg.placeholder = "send a message";
+          sendMsg.addEventListener("keyup", function (event) {
+            if (event.keyCode === 13 && sendMsg.value !== "" && name !== undefined && name !== "" && name !== null && name !== " "
+            ) {
+
+              event.preventDefault();
+              socket.send(sendMsg.value);
+              const responseElement = createResponseElement("chat-response");
+              responseElement.textContent = `${name} : ${sendMsg.value}`;
+              responseElement.style.color = "violet";
+              document.body.append(responseElement);
+              sendMsg.value = "";
+            }
+          });
+          sendMsg.classList.add("chat-input");
+          sendMsg.style.position = "fixed";
+          sendMsg.style.bottom = "10px";
+          sendMsg.style.width = "70%";
+          sendMsg.style.height = "30px";
+          sendMsg.style.backgroundColor = "white";
+          sendMsg.style.borderRadius = "10px";
+          sendMsg.style.margin = "10px";
+          document.body.append(sendMsg);
         }
-      });
-      document.body.append(sendMsg);
+      }
 
+      function WUrName(call) {
+        const sendMsg = document.createElement("input");
+        sendMsg.type = "text";
+        sendMsg.placeholder = "what is your name?";
+        sendMsg.addEventListener("keyup", function (event) {
+          if (event.keyCode === 13) {
+            event.preventDefault();
+            socket.send("my name is " + sendMsg.value);
+            sendMsg.remove();
+            call(sendMsg.value);
+          }
+        });
+        document.body.append(sendMsg);
+      }
     });
+
 
   </script>
 
